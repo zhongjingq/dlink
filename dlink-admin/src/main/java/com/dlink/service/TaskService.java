@@ -55,11 +55,13 @@ public interface TaskService extends ISuperService<Task> {
 
     Task getTaskInfoById(Integer id);
 
+    void initTenantByTaskId(Integer id);
+
     boolean saveOrUpdateTask(Task task);
 
     List<Task> listFlinkSQLEnv();
 
-    Task initDefaultFlinkSQLEnv();
+    Task initDefaultFlinkSQLEnv(Integer tenantId);
 
     String exportSql(Integer id);
 
@@ -103,11 +105,14 @@ public interface TaskService extends ISuperService<Task> {
 
     Result queryAllCatalogue();
 
-    Result<List<Task>> queryOnLineTaskByDoneStatus(List<JobLifeCycle> jobLifeCycle
-        , List<JobStatus> jobStatuses, boolean includeNull, Integer catalogueId);
+    Result<List<Task>> queryOnLineTaskByDoneStatus(List<JobLifeCycle> jobLifeCycle, List<JobStatus> jobStatuses,
+            boolean includeNull, Integer catalogueId);
 
     void selectSavepointOnLineTask(TaskOperatingResult taskOperatingResult);
 
     void selectSavepointOffLineTask(TaskOperatingResult taskOperatingResult);
 
+    Task getTaskByNameAndTenantId(String name, Integer tenantId);
+
+    JobStatus checkJobStatus(JobInfoDetail jobInfoDetail);
 }

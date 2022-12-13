@@ -20,7 +20,9 @@
 package com.dlink.service.impl;
 
 import com.dlink.assertion.Asserts;
+import com.dlink.assertion.Tips;
 import com.dlink.common.result.ProTableResult;
+import com.dlink.context.TenantContextHolder;
 import com.dlink.db.service.impl.SuperServiceImpl;
 import com.dlink.db.util.ProTableUtil;
 import com.dlink.explainer.lineage.LineageBuilder;
@@ -33,7 +35,6 @@ import com.dlink.model.JobInstance;
 import com.dlink.model.JobInstanceCount;
 import com.dlink.model.JobInstanceStatus;
 import com.dlink.model.JobStatus;
-import com.dlink.model.SystemConfiguration;
 import com.dlink.service.ClusterConfigurationService;
 import com.dlink.service.ClusterService;
 import com.dlink.service.HistoryService;
@@ -59,7 +60,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @since 2022/2/2 13:52
  */
 @Service
-public class JobInstanceServiceImpl extends SuperServiceImpl<JobInstanceMapper, JobInstance> implements JobInstanceService {
+public class JobInstanceServiceImpl extends SuperServiceImpl<JobInstanceMapper, JobInstance>
+        implements
+            JobInstanceService {
 
     @Autowired
     private HistoryService historyService;
@@ -69,6 +72,11 @@ public class JobInstanceServiceImpl extends SuperServiceImpl<JobInstanceMapper, 
     private ClusterConfigurationService clusterConfigurationService;
     @Autowired
     private JobHistoryService jobHistoryService;
+
+    @Override
+    public JobInstance getByIdWithoutTenant(Integer id) {
+        return baseMapper.getByIdWithoutTenant(id);
+    }
 
     @Override
     public JobInstanceStatus getStatusCount(boolean isHistory) {
@@ -153,7 +161,8 @@ public class JobInstanceServiceImpl extends SuperServiceImpl<JobInstanceMapper, 
             history.setConfig(JSONUtil.parseObject(history.getConfigJson()));
             jobInfoDetail.setHistory(history);
             if (Asserts.isNotNull(history.getClusterConfigurationId())) {
-                jobInfoDetail.setClusterConfiguration(clusterConfigurationService.getClusterConfigById(history.getClusterConfigurationId()));
+                jobInfoDetail.setClusterConfiguration(
+                        clusterConfigurationService.getClusterConfigById(history.getClusterConfigurationId()));
             }
             return jobInfoDetail;
         }
@@ -174,7 +183,8 @@ public class JobInstanceServiceImpl extends SuperServiceImpl<JobInstanceMapper, 
         history.setConfig(JSONUtil.parseObject(history.getConfigJson()));
         jobInfoDetail.setHistory(history);
         if (Asserts.isNotNull(history) && Asserts.isNotNull(history.getClusterConfigurationId())) {
-            jobInfoDetail.setClusterConfiguration(clusterConfigurationService.getClusterConfigById(history.getClusterConfigurationId()));
+            jobInfoDetail.setClusterConfiguration(
+                    clusterConfigurationService.getClusterConfigById(history.getClusterConfigurationId()));
         }
         if (pool.exist(key)) {
             pool.refresh(jobInfoDetail);
@@ -187,11 +197,7 @@ public class JobInstanceServiceImpl extends SuperServiceImpl<JobInstanceMapper, 
     @Override
     public LineageResult getLineage(Integer id) {
         History history = getJobInfoDetail(id).getHistory();
-        if (SystemConfiguration.getInstances().isUseLogicalPlan()) {
-            return LineageBuilder.getColumnLineageByLogicalPlan(history.getStatement());
-        } else {
-            return LineageBuilder.getLineage(history.getStatement());
-        }
+        return LineageBuilder.getColumnLineageByLogicalPlan(history.getStatement());
     }
 
     @Override
@@ -219,7 +225,15 @@ public class JobInstanceServiceImpl extends SuperServiceImpl<JobInstanceMapper, 
                 list.get(i).setDuration(pool.get(list.get(i).getId().toString()).getInstance().getDuration());
             }
         }
-        return ProTableResult.<JobInstance>builder().success(true).data(list).total(page.getTotal()).current(current).pageSize(pageSize).build();
+        return ProTableResult.<JobInstance>builder().success(true).data(list).total(page.getTotal()).current(current)
+                .pageSize(pageSize).build();
+    }
+
+    @Override
+    public void initTenantByJobInstanceId(Integer id) {
+        Integer tenantId = baseMapper.getTenantByJobInstanceId(id);
+        Asserts.checkNull(tenantId, Tips.JOB_INSTANCE_NOT_EXIST);
+        TenantContextHolder.set(tenantId);
     }
 
 }

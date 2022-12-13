@@ -26,6 +26,7 @@ import ProList from '@ant-design/pro-list';
 import {explainSql} from "@/pages/DataStudio/service";
 import {useEffect, useState} from "react";
 import CodeShow from "@/components/Common/CodeShow";
+import {l} from "@/utils/intl";
 
 const {Paragraph, Text} = Typography;
 
@@ -47,6 +48,7 @@ export type StudioExplainProps = {
   data: Partial<ExplainItem>;
 }
 const StudioExplain = (props: any) => {
+
   const [explainData, setExplainData] = useState([]);
   const [result, setResult] = useState(<Text>正在校验中...</Text>);
   const {

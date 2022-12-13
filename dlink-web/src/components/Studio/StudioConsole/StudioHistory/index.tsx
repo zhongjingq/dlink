@@ -30,9 +30,9 @@ import StudioPreview from "../StudioPreview";
 import {getJobData} from "@/pages/DataStudio/service";
 import {HistoryItem} from "@/components/Studio/StudioConsole/StudioHistory/data";
 import CodeShow from "@/components/Common/CodeShow";
+import {l} from "@/utils/intl";
 
-
-const {Title, Paragraph, Text, Link} = Typography;
+const { Paragraph, Text, Link} = Typography;
 
 type HistoryConfig = {
   useSession: boolean;
@@ -84,8 +84,8 @@ const StudioHistory = (props: any) => {
     Modal.confirm({
       title: '删除执行记录',
       content: '确定删除该执行记录吗？',
-      okText: '确认',
-      cancelText: '取消',
+      okText: l('button.confirm'),
+      cancelText: l('button.cancel'),
       onOk: async () => {
         await handleRemove(url, [row]);
         refs.history?.current?.reload();
@@ -113,7 +113,8 @@ const StudioHistory = (props: any) => {
         headerTitle="执行历史"
         request={(params, sorter, filter) => queryData(url, {...params, sorter: {id: 'descend'}, filter})}
         pagination={{
-          pageSize: 5,
+          defaultPageSize: 5,
+          showSizeChanger: true,
         }}
         showActions="hover"
         metas={{
@@ -211,7 +212,7 @@ const StudioHistory = (props: any) => {
               <a key="delete" onClick={() => {
                 removeHistory(row)
               }}>
-                删除
+                {l('button.delete')}
               </a>,
             ],
             search: false,
@@ -291,7 +292,7 @@ const StudioHistory = (props: any) => {
               </Tag>
             </ProDescriptions.Item>
             <ProDescriptions.Item label="共享会话">
-              {config.useSession ? '启用' : '禁用'}
+              {config.useSession ? l('button.enable') : l('button.disable')}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="会话 Key">
               {config.session}
@@ -309,16 +310,16 @@ const StudioHistory = (props: any) => {
               {config.clusterConfigurationId}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="预览结果">
-              {config.useResult ? '启用' : '禁用'}
+              {config.useResult ? l('button.enable') : l('button.disable')}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="打印流">
-              {config.useChangeLog ? '启用' : '禁用'}
+              {config.useChangeLog ? l('button.enable') : l('button.disable')}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="最大行数">
               {config.maxRowNum}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="自动停止">
-              {config.useAutoCancel ? '启用' : '禁用'}
+              {config.useAutoCancel ? l('button.enable') : l('button.disable')}
             </ProDescriptions.Item>
             <ProDescriptions.Item span={2} label="JobManagerAddress">
               {row.jobManagerAddress}
@@ -330,10 +331,10 @@ const StudioHistory = (props: any) => {
               {config.jobName}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="片段机制">
-              {config.useSqlFragment ? '启用' : '禁用'}
+              {config.useSqlFragment ? l('button.enable') : l('button.disable')}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="语句集">
-              {config.useStatementSet ? '启用' : '禁用'}
+              {config.useStatementSet ? l('button.enable') : l('button.disable')}
             </ProDescriptions.Item>
             <ProDescriptions.Item label="并行度">
               {config.parallelism}

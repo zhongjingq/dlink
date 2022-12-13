@@ -26,6 +26,7 @@ import com.dlink.model.FlinkCDCConfig;
 import com.dlink.model.Table;
 
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.runtime.util.EnvironmentInformation;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,6 +49,7 @@ public class FlinkBaseUtil {
         params.put(FlinkParamConstant.URL, parameters.get(FlinkParamConstant.URL, null));
         params.put(FlinkParamConstant.USERNAME, parameters.get(FlinkParamConstant.USERNAME, null));
         params.put(FlinkParamConstant.PASSWORD, parameters.get(FlinkParamConstant.PASSWORD, null));
+        params.put(FlinkParamConstant.DINKY_ADDR, parameters.get(FlinkParamConstant.DINKY_ADDR, null));
         return params;
     }
 
@@ -70,7 +72,11 @@ public class FlinkBaseUtil {
 
     public static String getFlinkDDL(Table table, String tableName, FlinkCDCConfig config, String sinkSchemaName, String sinkTableName, String pkList) {
         StringBuilder sb = new StringBuilder();
-        sb.append("CREATE TABLE IF NOT EXISTS `");
+        if (Integer.parseInt(EnvironmentInformation.getVersion().split("\\.")[1]) < 13) {
+            sb.append("CREATE TABLE  `");
+        } else {
+            sb.append("CREATE TABLE IF NOT EXISTS `");
+        }
         sb.append(tableName);
         sb.append("` (\n");
         List<String> pks = new ArrayList<>();

@@ -41,10 +41,10 @@ const CodeShow = (props: CodeShowFormProps) => {
       renderSideBySide: false,
       autoIndent: 'None',
       readOnly: true,
+      automaticLayout: true,
     },
     code,
   } = props;
-
 
   return (<>
     <MonacoEditor
@@ -53,7 +53,7 @@ const CodeShow = (props: CodeShowFormProps) => {
       language={language}
       value={code}
       options={options}
-      theme={theme}
+      theme='vs-dark'
     />
   </>)
 };

@@ -32,12 +32,16 @@ import org.apache.flink.client.deployment.ClusterSpecification;
 import org.apache.flink.client.deployment.application.ApplicationConfiguration;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.client.program.ClusterClientProvider;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.DeploymentOptionsInternal;
+import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.PipelineOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.kubernetes.KubernetesClusterDescriptor;
 import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.http.util.TextUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,6 +72,14 @@ public class KubernetesApplicationGateway extends KubernetesGateway {
         }
         KubernetesResult result = KubernetesResult.build(getType());
         AppConfig appConfig = config.getAppConfig();
+        String flinkConfigPath = config.getClusterConfig().getFlinkConfigPath();
+        Configuration loadConfiguration = GlobalConfiguration.loadConfiguration(flinkConfigPath);
+        if (loadConfiguration != null) {
+            loadConfiguration.addAll(configuration);
+            configuration = loadConfiguration;
+        }
+        configuration.set(DeploymentOptionsInternal.CONF_DIR, flinkConfigPath);
+
         configuration.set(PipelineOptions.JARS, Collections.singletonList(appConfig.getUserJarPath()));
         String[] userJarParas = appConfig.getUserJarParas();
         if (Asserts.isNull(userJarParas)) {
@@ -108,8 +120,17 @@ public class KubernetesApplicationGateway extends KubernetesGateway {
                 }
                 result.setJids(jids);
             }
-            String clusterId = clusterClient.getClusterId();
-            result.setClusterId(clusterId);
+            String jobId = "";
+            //application mode only have one job, so we can get any one to be jobId
+            for (JobStatusMessage jobStatusMessage : jobStatusMessages) {
+                jobId = jobStatusMessage.getJobId().toHexString();
+            }
+            //if JobStatusMessage not have job id, use timestamp
+            //and... it`s maybe wrong with submit
+            if (TextUtils.isEmpty(jobId)) {
+                jobId = "unknown" + System.currentTimeMillis();
+            }
+            result.setClusterId(jobId);
             result.setWebURL(clusterClient.getWebInterfaceURL());
             result.success();
         } catch (Exception e) {

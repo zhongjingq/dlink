@@ -41,7 +41,7 @@ import java.util.Set;
  * @author wenmo
  * @since 2021/7/19 23:15
  */
-public interface Driver {
+public interface Driver extends AutoCloseable {
 
     static Optional<Driver> get(DriverConfig config) {
         Asserts.checkNotNull(config, "数据源配置不能为空");
@@ -156,6 +156,8 @@ public interface Driver {
     boolean truncateTable(Table table) throws Exception;
 
     String getCreateTableSql(Table table);
+
+    String getSqlSelect(Table table);
 
     String getDropTableSql(Table table);
 

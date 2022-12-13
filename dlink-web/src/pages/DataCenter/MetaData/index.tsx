@@ -31,24 +31,26 @@ import {
   DatabaseOutlined,
   DownOutlined,
   ExclamationCircleOutlined,
+  LaptopOutlined,
   ReadOutlined,
   TableOutlined,
 } from '@ant-design/icons';
 import {Scrollbars} from 'react-custom-scrollbars';
 import {TreeDataNode} from '@/components/Studio/StudioTree/Function';
-import Tables from '@/pages/DataBase/Tables';
-import Columns from '@/pages/DataBase/Columns';
+import Tables from '@/pages/RegistrationCenter/DataBase/Tables';
+import Columns from '@/pages/RegistrationCenter/DataBase/Columns';
 import Divider from 'antd/es/divider';
-import Generation from '@/pages/DataBase/Generation';
+import Generation from '@/pages/RegistrationCenter/DataBase/Generation';
 import TableData from '@/pages/DataCenter/MetaData/TableData';
-import {FALLBACK, getDBImage} from "@/pages/DataBase/DB";
+import {FALLBACK, getDBImage} from "@/pages/RegistrationCenter/DataBase/DB";
 import Meta from "antd/lib/card/Meta";
+import {l} from "@/utils/intl";
+import Console from './Console';
 
 const {DirectoryTree} = Tree;
 const {TabPane} = Tabs;
 
 const MetaDataContainer: React.FC<{}> = (props: any) => {
-
 
   let [database, setDatabase] = useState<[{
     id: number,
@@ -71,10 +73,10 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
   }]);
   const [databaseId, setDatabaseId] = useState<number>();
   const [treeData, setTreeData] = useState<{ tables: [], updateTime: string }>({tables: [], updateTime: "none"});
+  const [schemeList, setSchemeList] = useState<{}>({});
   const [row, setRow] = useState<TreeDataNode>();
   const [loadingDatabase, setloadingDatabase] = useState(false);
   const [tableChecked, setTableChecked] = useState(true);
-  const [dataBaseChecked, setDatabaseChecked] = useState(false);
 
   const fetchDatabaseList = async () => {
     const res = getData('api/database/listEnabledAll');
@@ -90,7 +92,7 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
     const res = showMetaDataTable(databaseId);
     await res.then((result) => {
       let tables = result.datas;
-
+      setSchemeList(tables)
       if (tables) {
         for (let i = 0; i < tables.length; i++) {
           tables[i].title = tables[i].name;
@@ -167,10 +169,10 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
                     </Tag>
                     {(item.status) ?
                       (<Tag icon={<CheckCircleOutlined/>} color="success">
-                        正常
+                        {l('global.table.status.normal')}
                       </Tag>) :
                       <Tag icon={<ExclamationCircleOutlined/>} color="warning">
-                        异常
+                        {l('global.table.status.abnormal')}
                       </Tag>}
                   </div>
                 </Col>
@@ -195,14 +197,14 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
                         refeshDataBase(databaseId)
                         setTableChecked(true)
                       }}
-              >刷新</Button>
+              >{l('button.refresh')}</Button>
             </div>
             <div>{item.alias}</div>
           </div>
         )
       }
     }
-    return (<div>未选择数据库</div>)
+    return (<div>{l('pages.metadata.NoDatabaseSelected')}</div>)
   }
 
 
@@ -224,7 +226,7 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
               >
                 <Meta title={buildListTitle()}
                       className={styles.tableListHead}
-                      description={"上次更新：" + treeData.updateTime}
+                      description={"Last Update：" + treeData.updateTime}
                 />
                 {treeData.tables.length > 0 ? (
                   <Scrollbars style={{height: 800}}>
@@ -256,13 +258,13 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
                            tab={
                              <span>
                           <ReadOutlined/>
-                          描述
+                               {l('pages.metadata.Description')}
                         </span>
                            }
                            key="describe"
                   >
                     <Divider orientation="left" plain>
-                      表信息
+                      {l('pages.metadata.TableInfo')}
                     </Divider>
                     {row ? (
                       <Tables table={row}/>
@@ -270,7 +272,7 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
                       <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}/>
                     )}
                     <Divider orientation="left" plain>
-                      字段信息
+                      {l('pages.metadata.FieldInformation')}
                     </Divider>
                     {row ? (
                       <Columns dbId={databaseId} schema={row.schema} table={row.table}/>
@@ -283,7 +285,7 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
                            tab={
                              <span>
                           <BarsOutlined/>
-                          数据查询
+                               {l('pages.metadata.DataSearch')}
                         </span>
                            }
                            key="exampleData"
@@ -299,13 +301,29 @@ const MetaDataContainer: React.FC<{}> = (props: any) => {
                            tab={
                              <span>
                           <ConsoleSqlOutlined/>
-                          SQL 生成
+                               {l('pages.metadata.GenerateSQL')}
                         </span>
                            }
                            key="sqlGeneration"
                   >
                     {row ? (
                       <Generation dbId={databaseId} schema={row.schema} table={row.table}/>
+                    ) : (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}/>
+                    )}
+                  </TabPane>
+
+                  <TabPane disabled={tableChecked}
+                           tab={
+                             <span>
+                          <LaptopOutlined />
+                               {l('pages.metadata.Console')}
+                        </span>
+                           }
+                           key="Console"
+                  >
+                    {schemeList ? (
+                      <Console dbId={databaseId} schemeList={schemeList} database={database} />
                     ) : (
                       <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}/>
                     )}

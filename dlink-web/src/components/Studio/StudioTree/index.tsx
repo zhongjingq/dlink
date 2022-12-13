@@ -44,6 +44,7 @@ import {Scrollbars} from "react-custom-scrollbars";
 import {getIcon} from "@/components/Studio/icon";
 import {showEnv, showMetaStoreCatalogs} from "@/components/Studio/StudioEvent/DDL";
 import UploadModal from "@/components/Studio/StudioTree/components/UploadModal";
+import {l} from "@/utils/intl";
 
 type StudioTreeProps = {
   rightClickMenu: StateType['rightClickMenu'];
@@ -63,8 +64,8 @@ type RightClickMenu = {
 
 //将树形节点改为一维数组
 const generateList = (data: any, list: any[]) => {
-  for (let i = 0; i < data.length; i++) {
-    const node = data[i];
+  for (const element of data) {
+    const node = element;
     const {name, id, parentId, level} = node;
     list.push({name, id, key: id, title: name, parentId, level});
     if (node.children) {
@@ -77,8 +78,8 @@ const generateList = (data: any, list: any[]) => {
 // tree树 匹配方法
 const getParentKey = (key: number | string, tree: any): any => {
   let parentKey;
-  for (let i = 0; i < tree.length; i++) {
-    const node = tree[i];
+  for (const element of tree) {
+    const node = element;
     if (node.children) {
       if (node.children.some((item: any) => item.id === key)) {
         parentKey = node.id;
@@ -94,6 +95,7 @@ const {DirectoryTree} = Tree;
 const {Search} = Input;
 
 const StudioTree: React.FC<StudioTreeProps> = (props) => {
+
   const {rightClickMenu, dispatch, tabs, refs, toolHeight} = props;
   const [treeData, setTreeData] = useState<TreeDataNode[]>();
   const [expandedKeys, setExpandedKeys] = useState<Key[]>();
@@ -136,8 +138,7 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
     const expandList: any[] = generateList(treeData, []);
     let expandedKeys: any = expandList.map((item: any) => {
       if (item && item.name.indexOf(value) > -1) {
-        let key = getParentKey(item.key, treeData);
-        return key;
+        return getParentKey(item.key, treeData);
       }
       return null;
     })
@@ -151,11 +152,11 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
     const result = await getCatalogueTreeData();
     let data = result.datas;
     let list = data;
-    for (let i = 0; i < list.length; i++) {
-      list[i].title = list[i].name;
-      list[i].key = list[i].id;
-      if (list[i].isLeaf) {
-        list[i].icon = getIcon(list[i].type);
+    for (const element of list) {
+      element.title = element.name;
+      element.key = element.id;
+      if (element.isLeaf) {
+        element.icon = getIcon(element.type);
       }
     }
     data = convertToTreeData(list, 0);
@@ -203,43 +204,56 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
     setIsUploadModalVisible(true);
   };
 
+  const activeTabCall = (node: TreeDataNode) => {
+    dispatch && dispatch({
+      type: "Studio/saveToolHeight",
+      payload: toolHeight - 0.0001,
+    });
+    dispatch && dispatch({
+      type: "Studio/changeActiveKey",
+      payload: node.taskId,
+    });
+  };
+
+  const checkInPans = (node: TreeDataNode) => {
+    for (let item of tabs?.panes!) {
+      if (item.key == node.taskId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   const toOpen = (node: TreeDataNode | undefined) => {
     if (!available) {
       return
     }
+
     setAvailable(false);
     setTimeout(() => {
       setAvailable(true);
     }, 200);
 
     if (node?.isLeaf && node.taskId) {
-      for (let item of tabs.panes) {
-        if (item.key == node.taskId) {
-          dispatch && dispatch({
-            type: "Studio/saveToolHeight",
-            payload: toolHeight - 0.0001,
-          });
-          dispatch && dispatch({
-            type: "Studio/changeActiveKey",
-            payload: node.taskId,
-          });
-          return;
-        }
+      if(checkInPans(node)) {
+        activeTabCall(node);
+        return;
       }
+
       const result = getInfoById('/api/task', node.taskId);
       result.then(result => {
         let newTabs = tabs;
         let newPane: any = {
-          title: node!.name,
-          key: node!.taskId,
+          title: node.name,
+          key: node.taskId,
           value: (result.datas.statement ? result.datas.statement : ''),
-          icon: node!.icon,
+          icon: node.icon,
           closable: true,
-          path: node!.path,
+          path: node.path,
           task: {
             session: '',
             maxRowNum: 100,
-            jobName: node!.name,
+            jobName: node.name,
             useResult: true,
             useChangeLog: false,
             useAutoCancel: false,
@@ -254,7 +268,11 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
           monaco: React.createRef(),
           metaStore: []
         };
-        newTabs!.activeKey = node!.taskId;
+        newTabs!.activeKey = node.taskId;
+        if (checkInPans(node)) {
+          return;
+        }
+
         newTabs!.panes!.push(newPane);
         dispatch && dispatch({
           type: "Studio/saveTabs",
@@ -291,8 +309,8 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
     Modal.confirm({
       title: '提交作业',
       content: '确定提交该作业到其配置的集群吗？',
-      okText: '确认',
-      cancelText: '取消',
+      okText: l('button.confirm'),
+      cancelText: l('button.cancel'),
       onOk: async () => {
         let task = {
           id: node?.taskId,
@@ -409,8 +427,8 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
     Modal.confirm({
       title: `删除${label}`,
       content: `确定删除该${label}【${node?.name}】吗？`,
-      okText: '确认',
-      cancelText: '取消',
+      okText: l('button.confirm'),
+      cancelText: l('button.cancel'),
       onOk: async () => {
         await handleRemoveById('/api/catalogue', node!.id);
         if (node?.taskId) {
@@ -427,43 +445,43 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
   const getNodeTreeRightClickMenu = () => {
     const {pageX, pageY} = {...rightClickNodeTreeItem};
     const tmpStyle: any = {
-      position: 'absolute',
+      position: 'fixed',
       left: pageX,
       top: pageY,
     };
     let menuItems;
     if (rightClickNode && rightClickNode.isLeaf) {
       menuItems = (<>
-        <Menu.Item key='Open'>{'打开'}</Menu.Item>
-        <Menu.Item key='Submit'>{'异步提交'}</Menu.Item>
-        <Menu.Item key='ExportJson'>{'导出Json'}</Menu.Item>
-        <Menu.Item key='Rename'>{'重命名'}</Menu.Item>
-        <Menu.Item key='Copy'>{'复制'}</Menu.Item>
-        <Menu.Item key='Cut'>{'剪切'}</Menu.Item>
-        {cutId && <Menu.Item key='Paste'>{'粘贴'}</Menu.Item>}
-        <Menu.Item key='Delete'>{'删除'}</Menu.Item>
+        <Menu.Item key='Open'>{l('right.menu.open')}</Menu.Item>
+        <Menu.Item key='Submit'>{l('right.menu.submit')}</Menu.Item>
+        <Menu.Item key='ExportJson'>{l('right.menu.exportJson')}</Menu.Item>
+        <Menu.Item key='Rename'>{l('right.menu.rename')}</Menu.Item>
+        <Menu.Item key='Copy'>{l('right.menu.copy')}</Menu.Item>
+        <Menu.Item key='Cut'>{l('right.menu.cut')}</Menu.Item>
+        {cutId && <Menu.Item key='Paste'>{l('right.menu.paste')}</Menu.Item>}
+        <Menu.Item key='Delete'>{l('right.menu.delete')}</Menu.Item>
       </>)
     } else if (rightClickNode && rightClickNode.children && rightClickNode.children.length > 0) {
       menuItems = (<>
-        <Menu.Item key='CreateCatalogue'>{'创建目录'}</Menu.Item>
-        <Menu.Item key='CreateRootCatalogue'>{'创建根目录'}</Menu.Item>
-        <Menu.Item key='ShowUploadModal'>{'上传zip包创建工程'}</Menu.Item>
-        <Menu.Item key='CreateTask'>{'创建作业'}</Menu.Item>
-        <Menu.Item key='Rename'>{'重命名'}</Menu.Item>
-        <Menu.Item key='Copy'>{'复制'}</Menu.Item>
-        <Menu.Item key='Cut'>{'剪切'}</Menu.Item>
-        {cutId && <Menu.Item key='Paste'>{'粘贴'}</Menu.Item>}
-        <Menu.Item disabled>{'删除'}</Menu.Item>
+        <Menu.Item key='CreateCatalogue'>{l('right.menu.createCatalogue')}</Menu.Item>
+        <Menu.Item key='CreateRootCatalogue'>{l('right.menu.createRootCatalogue')}</Menu.Item>
+        <Menu.Item key='ShowUploadModal'>{l('right.menu.uploadZipToCreate')}</Menu.Item>
+        <Menu.Item key='CreateTask'>{l('right.menu.createTask')}</Menu.Item>
+        <Menu.Item key='Rename'>{l('right.menu.rename')}</Menu.Item>
+        <Menu.Item key='Copy'>{l('right.menu.copy')}</Menu.Item>
+        <Menu.Item key='Cut'>{l('right.menu.cut')}</Menu.Item>
+        {cutId && <Menu.Item key='Paste'>{l('right.menu.paste')}</Menu.Item>}
+        <Menu.Item key='Delete'>{l('right.menu.delete')}</Menu.Item>
       </>)
     } else {
       menuItems = (<>
-        <Menu.Item key='CreateCatalogue'>{'创建目录'}</Menu.Item>
-        <Menu.Item key='CreateTask'>{'创建作业'}</Menu.Item>
-        <Menu.Item key='Rename'>{'重命名'}</Menu.Item>
-        <Menu.Item key='Copy'>{'复制'}</Menu.Item>
-        <Menu.Item key='Cut'>{'剪切'}</Menu.Item>
-        {cutId && <Menu.Item key='Paste'>{'粘贴'}</Menu.Item>}
-        <Menu.Item key='Delete'>{'删除'}</Menu.Item>
+        <Menu.Item key='CreateCatalogue'>{l('right.menu.createCatalogue')}</Menu.Item>
+        <Menu.Item key='CreateTask'>{l('right.menu.createTask')}</Menu.Item>
+        <Menu.Item key='Rename'>{l('right.menu.rename')}</Menu.Item>
+        <Menu.Item key='Copy'>{l('right.menu.copy')}</Menu.Item>
+        <Menu.Item key='Cut'>{l('right.menu.cut')}</Menu.Item>
+        {cutId && <Menu.Item key='Paste'>{l('right.menu.paste')}</Menu.Item>}
+        <Menu.Item key='Delete'>{l('right.menu.delete')}</Menu.Item>
       </>)
     }
     const menu = (
@@ -486,17 +504,15 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
         isLeaf: false,
         parentId: 0,
       });
-    }}>创建目录</Button></Empty>);
+    }}>{l('button.createDir')}</Button></Empty>);
     return (treeData && treeData.length == 0) ? empty : '';
   };
 
   const handleContextMenu = (e: any) => {
-    let position = e.event.currentTarget.getBoundingClientRect();
-    let scrollTop = document.documentElement.scrollTop;
     setRightClickNode(e.node);
     setRightClickNodeTreeItem({
-      pageX: e.event.pageX - 40,
-      pageY: position.y + sref.current.getScrollTop() + scrollTop - 145 - position.height,
+      pageX: e.event.pageX,
+      pageY: e.event.pageY,
       id: e.node.id,
       categoryName: e.node.name
     });
@@ -594,7 +610,7 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
         }
         getTreeData();
       } else if (info.file.status === 'error') {
-        message.error(`${info.file.name} 上传失败`);
+        message.error(`${info.file.name}`+ l('app.request.upload.failed'));
       }
     },
   };
@@ -603,21 +619,21 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
     <div className={style.tree_div}>
       <Row>
         <Col span={24}>
-          <Tooltip title="创建根目录">
+          <Tooltip title={l('right.menu.createRootCatalogue')}>
             <Button
               type="text"
               icon={<FolderAddOutlined/>}
               onClick={createRootCatalogue}
             />
           </Tooltip>
-          <Tooltip title="折叠目录">
+          <Tooltip title={l('button.collapseDir')}>
             <Button
               type="text"
               icon={<SwitcherOutlined/>}
               onClick={offExpandAll}
             />
           </Tooltip>
-          <Tooltip title="导出json">
+          <Tooltip title={l('right.menu.exportJson')}>
             <Button
               type="text"
               icon={<DownloadOutlined/>}
@@ -625,7 +641,7 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
             />
           </Tooltip>
           <Upload {...uProps}>
-            <Tooltip title="导入json">
+            <Tooltip title={l('right.menu.importJson')}>
               <Button
                 type="text"
                 icon={<UploadOutlined/>}
@@ -706,7 +722,7 @@ const StudioTree: React.FC<StudioTreeProps> = (props) => {
         getTreeData();
       }} onCancel={() => {
         setIsUploadModalVisible(false)
-      }} buttonTitle="上传zip包并创建工程"/>
+      }} buttonTitle={l('right.menu.uploadZipToCreate')}/>
     </div>
   );
 };
